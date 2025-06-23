@@ -82,9 +82,9 @@ resource "aws_security_group" "allow_ssh" {
 resource "aws_vpc_security_group_ingress_rule" "allow_ssh" {
   security_group_id = aws_security_group.allow_ssh.id
   cidr_ipv4         = var.internet_cidr
-  from_port         = 22
+  from_port         = 5439
   ip_protocol       = "tcp"
-  to_port           = 22
+  to_port           = 5439
 }
 
 resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv4" {
@@ -103,6 +103,55 @@ resource "aws_redshift_subnet_group" "victor_subnet_group" {
   }
 }
 
+# Create IAM role
+resource "aws_iam_role" "redshift_role" {
+  name = "redshift_role"
+
+  # Terraform's "jsonencode" function converts a
+  # Terraform expression result to valid JSON syntax.
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Sid    = ""
+        Principal = {
+          Service = "redshift.amazonaws.com"
+        }
+      },
+    ]
+  })
+
+  tags = {
+    tag-key = "tag-value"
+  }
+}
+
+# Create a policy
+resource "aws_iam_role_policy" "redshift_policy" {
+  name = "redshift_policy"
+  role = aws_iam_role.redshift_role.id
+
+  # Terraform's "jsonencode" function converts a
+  # Terraform expression result to valid JSON syntax.
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:ListAllBuckets",
+          "redshift:*"
+        ]
+        Effect   = "Allow"
+        Resource = "*"
+      },
+    ]
+  })
+}
+
 #Create the cluster 
 resource "aws_redshift_cluster" "redshift_job" {
   cluster_identifier = "vic-redshift-cluster"
@@ -114,3 +163,4 @@ resource "aws_redshift_cluster" "redshift_job" {
 
   manage_master_password = true
 }
+
