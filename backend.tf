@@ -124,7 +124,7 @@ resource "aws_iam_role" "redshift_role" {
   })
 
   tags = {
-    tag-key = "tag-value"
+    tag-key = "redshift_task"
   }
 }
 
@@ -150,6 +150,11 @@ resource "aws_iam_role_policy" "redshift_policy" {
       },
     ]
   })
+}
+
+resource "aws_redshift_cluster_iam_roles" "redshift_cluster_iam_roles" {
+  cluster_identifier = aws_redshift_cluster.redshift_job.cluster_identifier
+  iam_role_arns      = [aws_iam_role.redshift_role.arn]
 }
 
 #Create the cluster 
